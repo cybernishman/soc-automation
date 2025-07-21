@@ -1,0 +1,259 @@
+{
+  "name": "soc demo",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "REDACTED_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "Secure Folder",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/REDACTED_FOLDER_ID"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "name": "Watch for New File",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2660,
+        -140
+      ],
+      "id": "a7605862-2af3-4247-ab31-d9a1802b1c50"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "download",
+        "fileId": "={{ $json[\"id\"] }}",
+        "options": {}
+      },
+      "name": "Download File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 1,
+      "position": [
+        -2360,
+        -140
+      ],
+      "id": "60205ddf-78c3-4742-8b6c-9f373d0fab34"
+    },
+    {
+      "parameters": {
+        "url": "=https://ipinfo.io/{{$json[\"SourceIP\"]}}?token=REDACTED_IPINFO_TOKEN",
+        "options": {}
+      },
+      "name": "IP Enrich (ipinfo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -2060,
+        -140
+      ],
+      "id": "31cc8bb2-9eab-4213-8384-07b0771dc846"
+    },
+    {
+      "parameters": {
+        "prompt": "=You are a SOC security analyst assistant. Given the following network incident details, do three things:\n- Summarize in 1 sentence\n- Assign a RiskLevel (High, Medium, Low) with a reason\n- Suggest one action for the analyst. Respond as JSON: {\"summary\":...,\"ai_risk\":...,\"justification\":...,\"action\":...}\n\nIncident details:\nTime: {{$json[\"Timestamp\"]}}\nSourceIP: {{$json[\"SourceIP\"]}}\nDestIP: {{$json[\"DestIP\"]}}\nDestPort: {{$json[\"DestPort\"]}}\nProtocol: {{$json[\"Protocol\"]}}\nAlert: {{$json[\"Alert\"]}}\nGeo: {{$json[\"city\"]}}, {{$json[\"region\"]}}, {{$json[\"country\"]}}\nOrg: {{$json[\"org\"]}}",
+        "options": {},
+        "requestOptions": {}
+      },
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        -140
+      ],
+      "id": "cd53b4ef-72c0-4ee9-a129-19a6240700e1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Add custom parsed field\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "name": "Parse AI Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -140
+      ],
+      "id": "707c9ece-3771-48bd-96d4-a003f3baaab8"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "sheetId": "REDACTED_SHEET_ID",
+        "range": "Sheet1!A1:Z",
+        "options": {}
+      },
+      "name": "Append to Incident Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        -140
+      ],
+      "id": "1772c2ce-db05-4a65-b9ec-55f4379aa92f"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json[\"ai_risk\"] }}",
+              "value2": "High"
+            }
+          ]
+        }
+      },
+      "name": "IF Risk is High",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        -140
+      ],
+      "id": "7bf831bd-5bfe-4192-8e3c-9886b97bc7ed"
+    },
+    {
+      "parameters": {
+        "channel": "#incident-alerts",
+        "text": "=🚨 *High-Risk Alert Detected!*\n{{$json[\"summary\"]}}\n\nSource IP: {{$json[\"SourceIP\"]}}\nAction: {{$json[\"action\"]}}",
+        "otherOptions": {},
+        "attachments": []
+      },
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [
+        -740,
+        -240
+      ],
+      "id": "3f7fb1f9-bfec-4abf-bf07-cdbae4402323"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "sheetId": "REDACTED_SHEET_ID",
+        "range": "NonCritical!A1:Z",
+        "options": {}
+      },
+      "name": "Log Medium/Low Risk",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        -740,
+        -40
+      ],
+      "id": "cde268f3-213f-45ba-8982-c974fea83aff"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Watch for New File": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IP Enrich (ipinfo)": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Output": {
+      "main": [
+        [
+          {
+            "node": "Append to Incident Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Incident Sheet": {
+      "main": [
+        [
+          {
+            "node": "IF Risk is High",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Risk is High": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Medium/Low Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "IP Enrich (ipinfo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5cfac943-bb15-4fb6-b478-2bebf17ccd7a",
+  "meta": {
+    "instanceId": "0f3ea04ef13d49431131e9bc44403ed424f24dfdf4fdce70b7e4853dc71203af"
+  },
+  "id": "MAcHL6ev4bngqBCX",
+  "tags": []
+}

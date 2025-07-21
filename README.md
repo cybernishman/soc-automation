@@ -1,4 +1,4 @@
-# soc-automation
+# SOC-Automation
 Industry-grade incident analysis, threat enrichment, and security workflow automation (Power Automate + n8n + OpenAI + Google).
 # SOC Automation & AI Incident Analysis
 

@@ -25,4 +25,4 @@ Industry-grade incident analysis, threat enrichment, and security workflow autom
 \
 
 ## Credits
-Built by [ManishPulluru] — [LinkedIn](www.linkedin.com/in/manish-pulluru-918507196) 
+Built by [ManishPulluru] — [LinkedIn](https://www.linkedin.com/in/manish-pulluru-918507196/) 
